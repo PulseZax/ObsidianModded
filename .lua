@@ -392,11 +392,12 @@ local Templates = {
         MinimizeButton = true,
         Minimized = false,
         Shadow = true,
-        ShadowTransparency = 0.4,
-        ShadowBlur = 34,
-        ShadowSpread = 0,
-        ShadowOffset = Vector2.new(0, 3),
+        ShadowTransparency = 0.45,
+        ShadowBlur = 36,
+        ShadowSpread = -2,
+        ShadowOffset = Vector2.new(0, 6),
         ShadowColor = Color3.new(0, 0, 0),
+        ShadowGlow = false,
 
         --// Window Snapping \\--
         Snapping = false,
@@ -11215,12 +11216,14 @@ function Library:FetchDiscordInvite(Code: string)
 end
 
 Library.ShadowPresets = {
-    Soft = { Transparency = 0.4, Blur = 34, Spread = 0, Offset = Vector2.new(0, 3), Color = Color3.new(0, 0, 0) },
-    Tight = { Transparency = 0.3, Blur = 14, Spread = 0, Offset = Vector2.new(0, 2), Color = Color3.new(0, 0, 0) },
-    Deep = { Transparency = 0.3, Blur = 64, Spread = -6, Offset = Vector2.new(0, 16), Color = Color3.new(0, 0, 0) },
-    Outline = { Transparency = 0.2, Blur = 6, Spread = 2, Offset = Vector2.zero, Color = Color3.new(0, 0, 0) },
-    Glow = { Transparency = 0.55, Blur = 42, Spread = 0, Offset = Vector2.zero, Color = "AccentColor" },
+    Soft = { Transparency = 0.45, Blur = 36, Spread = -2, Offset = Vector2.new(0, 6), Color = Color3.new(0, 0, 0) },
+    Elevated = { Transparency = 0.3, Blur = 46, Spread = -4, Offset = Vector2.new(0, 12), Color = Color3.new(0, 0, 0) },
+    Tight = { Transparency = 0.4, Blur = 14, Spread = 0, Offset = Vector2.new(0, 3), Color = Color3.new(0, 0, 0) },
+    Deep = { Transparency = 0.3, Blur = 64, Spread = -8, Offset = Vector2.new(0, 18), Color = Color3.new(0, 0, 0) },
+    Outline = { Transparency = 0.35, Blur = 4, Spread = 1, Offset = Vector2.zero, Color = Color3.new(0, 0, 0) },
+    Glow = { Transparency = 0.55, Blur = 40, Spread = 0, Offset = Vector2.zero, Color = "AccentColor" },
 }
+Library.ShadowGlowStyle = { Transparency = 0.72, Blur = 20, Spread = 0, Offset = Vector2.zero, Color = "AccentColor" }
 
 function Library:AttachShadow(Target: GuiObject, Info)
     if typeof(Info) == "number" then
@@ -11230,10 +11233,10 @@ function Library:AttachShadow(Target: GuiObject, Info)
     local Shadow = {
         Target = Target,
         Enabled = true,
-        Transparency = 0.4,
-        Blur = 34,
-        Spread = 0,
-        Offset = Vector2.new(0, 3),
+        Transparency = 0.45,
+        Blur = 36,
+        Spread = -2,
+        Offset = Vector2.new(0, 6),
         Color = Color3.new(0, 0, 0),
         Connections = {},
     }
@@ -11242,12 +11245,12 @@ function Library:AttachShadow(Target: GuiObject, Info)
         Active = false,
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://6014261993",
+        Image = "rbxassetid://1316045217",
         ImageColor3 = Color3.new(0, 0, 0),
         ImageTransparency = 1,
         Name = "Shadow",
         ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(49, 49, 450, 450),
+        SliceCenter = Rect.new(10, 10, 118, 118),
         ZIndex = Target.ZIndex - 1,
         Parent = Target.Parent,
     })
@@ -11265,7 +11268,7 @@ function Library:AttachShadow(Target: GuiObject, Info)
         local Position, Size = Target.AbsolutePosition, Target.AbsoluteSize
         local Center = Position - Root + Size / 2 + Shadow.Offset
 
-        Image.SliceScale = Blur / 49
+        Image.SliceScale = Blur / 10
         Image.Position = UDim2.fromOffset(Center.X, Center.Y)
         Image.Size = UDim2.fromOffset(math.max(Size.X + Extent * 2, Blur * 2), math.max(Size.Y + Extent * 2, Blur * 2))
         Image.ZIndex = Target.ZIndex - 1
@@ -12156,6 +12159,9 @@ function Library:CreateWindow(WindowInfo)
         if typeof(WindowInfo.Shadow) == "string" then
             Library.WindowShadow:SetStyle(WindowInfo.Shadow)
         end
+        Library.WindowGlow = Library:AttachShadow(MainFrame, Library.ShadowGlowStyle)
+        Library.WindowGlow:SetStyle(if typeof(WindowInfo.ShadowGlow) == "table" then WindowInfo.ShadowGlow else {})
+        Library.WindowGlow:SetEnabled(WindowInfo.ShadowGlow ~= false and WindowInfo.ShadowGlow ~= nil)
         Library:MakeLine(MainFrame, {
             Position = UDim2.fromOffset(0, 48),
             Size = UDim2.new(1, 0, 0, 1),
@@ -12589,6 +12595,29 @@ function Library:CreateWindow(WindowInfo)
         return Library.WindowShadow:GetStyle()
     end
 
+    function Window:SetShadowGlow(Style)
+        if Style == false or Style == nil then
+            Style = { Enabled = false }
+        elseif Style == true then
+            Style = { Enabled = true }
+        elseif typeof(Style) == "table" then
+            Style = table.clone(Style)
+            if Style.Enabled == nil then
+                Style.Enabled = true
+            end
+        else
+            return
+        end
+
+        for _, Glow in { Library.WindowGlow, MinimizeState.CardGlow } do
+            Glow:SetStyle(Style)
+        end
+    end
+
+    function Window:GetShadowGlow()
+        return Library.WindowGlow:GetStyle()
+    end
+
     function MinimizeState.Build()
         if MinimizeState.Card then
             return MinimizeState.Card
@@ -12618,6 +12647,7 @@ function Library:CreateWindow(WindowInfo)
         )
         Library:AddOutline(Card)
         MinimizeState.CardShadow = Library:AttachShadow(Card, Library.WindowShadow:GetStyle())
+        MinimizeState.CardGlow = Library:AttachShadow(Card, Library.WindowGlow:GetStyle())
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Vertical,
             Parent = Card,
